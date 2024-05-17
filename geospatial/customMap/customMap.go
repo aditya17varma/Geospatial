@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	
-	"geospatial/hub"
 
 	"github.com/morikuni/go-geoplot"
+
+	"geospatial/hub"
+	"geospatial/planner"
 )
 
 func StartMapServer(customMap *CustomMap) {
@@ -36,13 +37,12 @@ type CustomMap struct {
 	Circles []*geoplot.Circle
 }
 
-
 // NewCustomMap initializes a new CustomMap with essential attributes
 func NewCustomMap(center *geoplot.LatLng, zoom int, area *geoplot.Area) *CustomMap {
 	return &CustomMap{
-		Center: center,
-		Zoom:   zoom,
-		Area:   area,
+		Center:  center,
+		Zoom:    zoom,
+		Area:    area,
 		Markers: []*geoplot.Marker{},
 		Circles: []*geoplot.Circle{},
 	}
@@ -82,48 +82,53 @@ func (cm *CustomMap) ToGeoPlotMap() *geoplot.Map {
 }
 
 func InitHub(hubCollection map[string]*hub.Hub, hubMap *CustomMap) {
-	for _, hubStation := range(hubCollection) {
+	for _, hubStation := range hubCollection {
 		// Add hub to map
 		icon := geoplot.ColorIcon(255, 255, 0)
-		hubGeoplotCoords := &geoplot.LatLng {
-			Latitude: hubStation.Coordinates.Latitude,
+		hubGeoplotCoords := &geoplot.LatLng{
+			Latitude:  hubStation.Coordinates.Latitude,
 			Longitude: hubStation.Coordinates.Longitude,
 		}
-		bucketSizes := hubStation.ReportBucketSizes()
+		hubState := hubStation.ReportHubState()
+		chargingSpotsAvailable := hubState[0]
+		nodesWaiting := hubState[1]
+		nodesAllocated := hubState[2]
+
+		nodesCharging := hubStation.HubChargingSpotsTotal - chargingSpotsAvailable
 
 		hubAddr := hubStation.HubHost + ":" + hubStation.HubPort
 
-		log.Printf("Hub: %s\nBucket1: %d\nBucket2: %d\nBucket3: %d", hubAddr, bucketSizes[0], bucketSizes[1], bucketSizes[2])
+		log.Printf("Hub: %s\nCharging Spots: %d\nCharging: %d\nWaiting: %d\nAllocated: %d", hubAddr, chargingSpotsAvailable, nodesCharging, nodesWaiting, nodesAllocated)
 
 		hubMap.AddMarker(&geoplot.Marker{
 			LatLng:  hubGeoplotCoords,
-			Tooltip: fmt.Sprintf("%s\nBucket1: %d\nBucket2: %d\nBucket3: %d", hubAddr, bucketSizes[0], bucketSizes[1], bucketSizes[2]),
+			Tooltip: fmt.Sprintf("%s\nCharging Spots: %d\nCharging: %d\nWaiting: %d\nAllocated: %d", hubAddr, chargingSpotsAvailable, nodesCharging, nodesWaiting, nodesAllocated),
 			Icon:    icon,
 		})
 
-		hubMap.AddCircle(&geoplot.Circle{
-			LatLng:      hubGeoplotCoords,
-			RadiusMeter: 1000,
-			//Tooltip:     "Inner Circle",
-		})
+		// hubMap.AddCircle(&geoplot.Circle{
+		// 	LatLng:      hubGeoplotCoords,
+		// 	RadiusMeter: 1000,
+		// 	//Tooltip:     "Inner Circle",
+		// })
 
-		hubMap.AddCircle(&geoplot.Circle{
-			LatLng:      hubGeoplotCoords,
-			RadiusMeter: 2000,
-			//Tooltip:     "Middle Circle",
-		})
+		// hubMap.AddCircle(&geoplot.Circle{
+		// 	LatLng:      hubGeoplotCoords,
+		// 	RadiusMeter: 2000,
+		// 	//Tooltip:     "Middle Circle",
+		// })
 
-		hubMap.AddCircle(&geoplot.Circle{
-			LatLng:      hubGeoplotCoords,
-			RadiusMeter: 3000,
-			//Tooltip:     "Outer Circle",
-		})
+		// hubMap.AddCircle(&geoplot.Circle{
+		// 	LatLng:      hubGeoplotCoords,
+		// 	RadiusMeter: 3000,
+		// 	//Tooltip:     "Outer Circle",
+		// })
 	}
 	log.Println("-------------------------\n\n")
 }
 
 // hubCollection is a map of hub objects
-func UpdateMap(hubCollection map[string]*hub.Hub, hubMap *CustomMap) {
+func UpdateMap(hubCollection map[string]*hub.Hub, hubMap *CustomMap, planner *planner.Planner) {
 
 	// log.Println("Updating Map")
 
@@ -131,34 +136,61 @@ func UpdateMap(hubCollection map[string]*hub.Hub, hubMap *CustomMap) {
 	markers := hubMap.Markers
 	InitHub(hubCollection, hubMap)
 
-	for _, hubStation := range(hubCollection) {
-		hubStation.Mutex.Lock()
-		defer hubStation.Mutex.Unlock()
+	planner.Mutex.Lock()
+	defer planner.Mutex.Unlock()
+	// Add nodes to map
+	for nodeId, node := range planner.NodeMap {
+		hubAddr := node.HubAddr
 
-		for nodeId, node := range hubStation.NodeMap {
-
-			hubAddr := hubStation.HubHost + ":" + hubStation.HubPort
-
-			point := &geoplot.LatLng {
-				Latitude: node.Coordinates.Latitude,
-				Longitude: node.Coordinates.Longitude,
-			}
-
-			nodeIcon := geoplot.ColorIcon(0, 255, 0)
-			if node.BatteryLevel <= 50 && node.BatteryLevel > 30 {
-				nodeIcon = geoplot.ColorIcon(255, 128, 0)
-			} else if node.BatteryLevel <= 30 {
-				nodeIcon = geoplot.ColorIcon(255, 0, 0)	
-			}
-
-			markers = append(markers, (&geoplot.Marker{
-				LatLng: point,
-				//Popup: fmt.Sprintf("NodePop: %s", nodeId),
-				Tooltip: fmt.Sprintf("NodeId: %s\nBattery: %v\nSeeking Charge: %v\nHub: %v", nodeId, node.BatteryLevel, node.SeekingCharge, hubAddr),
-				Icon: nodeIcon,
-			}))
+		point := &geoplot.LatLng{
+			Latitude:  node.Coordinates.Latitude,
+			Longitude: node.Coordinates.Longitude,
 		}
+
+		nodeIcon := geoplot.ColorIcon(0, 255, 0)
+		if node.BatteryLevel <= 50 && node.BatteryLevel > 30 {
+			nodeIcon = geoplot.ColorIcon(255, 128, 0)
+		} else if node.BatteryLevel <= 30 {
+			nodeIcon = geoplot.ColorIcon(255, 0, 0)
+		}
+
+		markers = append(markers, (&geoplot.Marker{
+			LatLng: point,
+			//Popup: fmt.Sprintf("NodePop: %s", nodeId),
+			Tooltip: fmt.Sprintf("NodeId: %s\nBattery: %v\nSeeking Charge: %v\nHub: %v", nodeId, node.BatteryLevel, node.SeekingCharge, hubAddr),
+			Icon:    nodeIcon,
+		}))
+
 	}
+
+	// for _, hubStation := range hubCollection {
+	// 	hubStation.Mutex.Lock()
+	// 	defer hubStation.Mutex.Unlock()
+
+	// 	for nodeId, node := range hubStation.NodeMap {
+
+	// 		hubAddr := hubStation.HubHost + ":" + hubStation.HubPort
+
+	// 		point := &geoplot.LatLng{
+	// 			Latitude:  node.Coordinates.Latitude,
+	// 			Longitude: node.Coordinates.Longitude,
+	// 		}
+
+	// 		nodeIcon := geoplot.ColorIcon(0, 255, 0)
+	// 		if node.BatteryLevel <= 50 && node.BatteryLevel > 30 {
+	// 			nodeIcon = geoplot.ColorIcon(255, 128, 0)
+	// 		} else if node.BatteryLevel <= 30 {
+	// 			nodeIcon = geoplot.ColorIcon(255, 0, 0)
+	// 		}
+
+	// 		markers = append(markers, (&geoplot.Marker{
+	// 			LatLng: point,
+	// 			//Popup: fmt.Sprintf("NodePop: %s", nodeId),
+	// 			Tooltip: fmt.Sprintf("NodeId: %s\nBattery: %v\nSeeking Charge: %v\nHub: %v", nodeId, node.BatteryLevel, node.SeekingCharge, hubAddr),
+	// 			Icon:    nodeIcon,
+	// 		}))
+	// 	}
+	// }
 
 	for _, marker := range markers {
 		hubMap.AddMarker(marker)

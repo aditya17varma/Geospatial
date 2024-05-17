@@ -1,0 +1,15 @@
+[planner]
+host = "localhost"
+port = 9000
+allocationPolicy = "minDistance"
+
+[hub]
+host = "localhost"
+portRangeStart = 9001
+hub1Lat = 37.77695
+hub1Long = -122.45117
+chargingSpots = 5
+
+[node]
+host = "localhost"
+portRangeStart = 10000
