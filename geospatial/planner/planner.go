@@ -173,26 +173,18 @@ func (planner *Planner) assignHub(msgHandler *messages.MessageHandler, node_addr
 	var assignedHub *hub.Hub
 	var assignedKey string
 
-	if planner.AllocationPolicy == "minDistance" { // Find min distance hub
-		fmt.Println("Using minDistance policy")
-		minDistance := math.MaxFloat64
-		var closestHub *hub.Hub
-		var closestKey string
+	node := planner.NodeMap[node_id]
 
-		for key, hub := range planner.HubMap {
-			distance := haversine(lat, long, hub.Coordinates.Latitude, hub.Coordinates.Longitude)
-			if distance < minDistance {
-				closestHub = hub
-				minDistance = distance
-				closestKey = key
-			}
-		}
-		assignedHub = closestHub
-		assignedKey = closestKey
+	fmt.Printf("Using %s policy\n", planner.AllocationPolicy)
+	if planner.AllocationPolicy == "minDistance" || planner.AllocationPolicy == "minBattery" { // Find min distance hub
+		assignedHub, assignedKey = planner.assignMinDistance(node.Coordinates.Latitude, node.Coordinates.Longitude)
+	} else if planner.AllocationPolicy == "EM" { // Use EM to assign Hub
+		assignedHub, assignedKey = planner.assignHubEM(node.Coordinates.Latitude, node.Coordinates.Longitude, node.BatteryLevel)
+	} else {
+		fmt.Println("Unsupported Policy")
 	}
 
 	// Update hubAddr
-	node := planner.NodeMap[node_id]
 	node.HubAddr = assignedHub.HubHost + ":" + assignedHub.HubPort
 	planner.NodeMap[node_id] = node
 
@@ -254,4 +246,55 @@ func (planner *Planner) StartListening(listenPort string) {
 		msgHandler := messages.NewMessageHandler(conn)
 		go planner.HandleMessage(conn, msgHandler)
 	}
+}
+
+// Expectation Maximization
+// Cost function uses distance to hub, node batterly level, approximate waiting time
+func (planner *Planner) assignHubEM(lat, long float64, batteryLevel int32) (*hub.Hub, string) {
+	var assignedHub *hub.Hub
+	var assignedKey string
+
+	// E-step: Calculate probabilities based on distance, battery level, and available spots
+	minCost := math.MaxFloat64
+	for key, hub := range planner.HubMap {
+		fmt.Println("EM for:", key)
+		distance := haversine(lat, long, hub.Coordinates.Latitude, hub.Coordinates.Longitude)
+		// availableSpots := hub.HubChargingSpotsAvailable
+		numWaitingNodes := hub.GetWaitingNumNodes()
+		avgDowntime := hub.GetAverageDowntimeStat()
+
+		// fmt.Printf("[Planner EM] Distance %f availableSpots: %d waitingNodes: %d avgDowntime: %v\n", distance, availableSpots, numWaitingNodes, avgDowntime)
+
+		approxWaitingTime := float64(avgDowntime * time.Duration(numWaitingNodes)) // Simplistic waiting time calculation
+
+		// Cost function: weight distance, battery level, and waiting time
+		cost := distance + float64(100-batteryLevel) + approxWaitingTime
+		if cost < minCost {
+			minCost = cost
+			assignedHub = hub
+			assignedKey = key
+		}
+
+		// fmt.Printf("[Planner] Hub %s EM_Cost: %f\n", key, cost)
+
+	}
+
+	return assignedHub, assignedKey
+}
+
+func (planner *Planner) assignMinDistance(lat, long float64) (*hub.Hub, string) {
+	minDistance := math.MaxFloat64
+	var closestHub *hub.Hub
+	var closestKey string
+
+	for key, hub := range planner.HubMap {
+		distance := haversine(lat, long, hub.Coordinates.Latitude, hub.Coordinates.Longitude)
+		if distance < minDistance {
+			closestHub = hub
+			minDistance = distance
+			closestKey = key
+		}
+	}
+
+	return closestHub, closestKey
 }

@@ -85,6 +85,9 @@ func (pq PriorityQueue) Less(i, j int) bool {
 		return pq.nodes[i].BatteryLevel < pq.nodes[j].BatteryLevel
 	case "minDistance":
 		return pq.nodes[i].Distance < pq.nodes[j].Distance
+	case "EM":
+		// Highest battery level first to minimize charging time
+		return pq.nodes[i].BatteryLevel >= pq.nodes[j].BatteryLevel
 	default:
 		return pq.nodes[i].Distance < pq.nodes[j].Distance
 	}
@@ -471,7 +474,6 @@ func (hub *Hub) checkHubState() {
 				hub.HubChargingSpotsAvailable++
 				hub.NodesChargedTotal += 1
 
-
 				delete(hub.HubNodesCharging, nodeId)
 				delete(hub.NodeMap, nodeId)
 				sendChargeUpdate(node.NodeAddr)
@@ -512,7 +514,6 @@ func sendChargeUpdate(nodeAddr string) {
 		Msg: &messages.Wrapper_ServerMessage{ServerMessage: &serverMsg},
 	}
 	msgHandler.Send(wrapper)
-	log.Println("[Hub] Sent charge update to:", nodeAddr)
 	return
 }
 
@@ -564,4 +565,11 @@ func (hub *Hub) GetHubDowntime() time.Duration {
 	defer hub.Mutex.Unlock()
 
 	return hub.HubDowntime
+}
+
+func (hub *Hub) GetWaitingNumNodes() int {
+	hub.Mutex.Lock()
+	defer hub.Mutex.Unlock()
+
+	return hub.nodeQueue.Len()
 }

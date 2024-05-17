@@ -394,8 +394,11 @@ func movePoint(node *NodeStruct) {
 		fmt.Printf("[Node %s] Node Joined\n", nodeId)
 	}
 
+	// fmt.Println("MOVE POINT")
+	// fmt.Printf("[Node %s] charging: %v sc: %v at_hub: %v\n", node.NodeId, node.charging, node.seeking_charge, node.at_hub)
 	if !node.charging { // Moving towards hub or target
 		if node.seeking_charge && !node.at_hub { // Move towards hub
+
 			// fmt.Println("Moving towards hub")
 			hubDistance := haversine(node.lat, node.long, node.hub_lat, node.hub_long)
 			hubDistanceMeters := hubDistance * 1000
@@ -456,7 +459,7 @@ func movePoint(node *NodeStruct) {
 				// update battery
 				node.battery_level = node.battery_level - BATTERYCOST
 
-				fmt.Printf("[Node %s] Moving towards hub, distance: %f battery: %d\n", node.NodeId, targetDistanceMeters, node.battery_level)
+				fmt.Printf("[Node %s] Moving towards target, distance: %f battery: %d\n", node.NodeId, targetDistanceMeters, node.battery_level)
 				// Calculate the direction to move in
 				latDirection := node.targetLat - node.lat
 				longDirection := node.targetLong - node.long
@@ -505,9 +508,14 @@ func NewNode(plannerAddress, nodePort string, startingLat, stratingLong float64)
 
 		battery_level:  100,
 		seeking_charge: false,
+		charging:       false,
 
 		targetLat:  targetLat,
 		targetLong: targetLong,
+
+		at_target: false,
+		at_hub:    false,
+		hub_set:   false,
 	}
 
 	return &node, nil
@@ -516,12 +524,6 @@ func NewNode(plannerAddress, nodePort string, startingLat, stratingLong float64)
 // Function to activate a node in geospatial/main, instead of as a sepearate process
 // For simulation purposes
 func (node *NodeStruct) ActivateNode() {
-	// node hostname
-	// nodeHostname, err := os.Hostname()
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-
 	fmt.Printf("[Node %s] Activating Node %s\n", node.NodeId, node.NodeAddr)
 
 	// listenPort := nodePort
@@ -539,21 +541,6 @@ func (node *NodeStruct) ActivateNode() {
 
 	// Register with Planner
 	sendJoinPlanner(node)
-
-	// // send recon message to Planner
-	// _, reconHubAddr := sendRecon(node)
-	// node.hubAddr = reconHubAddr
-
-	// // Connect to hub server
-	// _, err = net.Dial("tcp", node.hubAddr)
-	// if err != nil {
-	// 	fmt.Println("Error connecting to hub server:", err)
-	// 	return
-	// }
-
-	// // send init message
-	// _, nodeId := sendJoin(node)
-	// fmt.Println("Node Joined:", nodeId)
 
 	hbChan := make(chan struct{})
 

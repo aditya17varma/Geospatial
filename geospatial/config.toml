@@ -1,7 +1,8 @@
 [planner]
 host = "localhost"
 port = 9000
-allocationPolicy = "minDistance"
+allocationPolicy = "EM"
+simTime = 100
 
 [hub]
 host = "localhost"
@@ -13,3 +14,4 @@ chargingSpots = 5
 [node]
 host = "localhost"
 portRangeStart = 10000
+numNodes = 30

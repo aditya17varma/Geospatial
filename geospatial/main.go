@@ -27,6 +27,7 @@ type PlannerConfig struct {
 	Host             string
 	Port             int
 	AllocationPolicy string
+	SimTime          int
 }
 
 type HubConfig struct {
@@ -40,6 +41,7 @@ type HubConfig struct {
 type NodeConfig struct {
 	Host           string
 	PortRangeStart int
+	NumNodes       int
 }
 
 func main() {
@@ -120,7 +122,7 @@ func main() {
 
 	idCounter := 100
 	// Create new Nodes
-	for i := 0; i < 30; i++ {
+	for i := 0; i < config.Node.NumNodes; i++ {
 		// Node Starting Coordinates
 		// Alternate between hub1 and hub2
 		nodeLat := centerLat
@@ -145,7 +147,7 @@ func main() {
 
 	// Start Nodes
 
-	for i := 0; i < 30; i++ {
+	for i := 0; i < config.Node.NumNodes; i++ {
 		fmt.Println("Starting node", i)
 		go nodeArray[i].ActivateNode()
 	}
@@ -153,6 +155,7 @@ func main() {
 	// Signals to Stop / Interrupt main simulation
 	sigs := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
+	simTime := time.After(time.Duration(config.Planner.SimTime) * time.Second)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -162,21 +165,13 @@ func main() {
 		fmt.Println(sig)
 		fmt.Println("Shutting down...")
 
-		fmt.Printf("--------------------------------------------------\n\n")
-		fmt.Printf("------------------DOWNTIME STATS------------------\n")
-		fmt.Println("HUB 1")
-		fmt.Printf("Total Downtime: %v\n", hub1.GetHubDowntime())
-		avgHub1 := hub1.GetAverageDowntimeStat()
-		fmt.Printf("Average Downtime per node: %v\n", avgHub1)
+		done <- true
+	}()
 
+	go func() {
+		<-simTime
 		fmt.Println()
-
-		fmt.Println("HUB 2")
-		fmt.Printf("Total Downtime: %v\n", hub2.GetHubDowntime())
-		avgHub2 := hub1.GetAverageDowntimeStat()
-		fmt.Printf("Average Downtime per node: %v\n", avgHub2)
-
-		fmt.Printf("--------------------------------------------------\n\n")
+		fmt.Println("Simulation Time Reached")
 
 		done <- true
 	}()
@@ -184,6 +179,26 @@ func main() {
 	// Wait for interrupt signal
 	fmt.Println("Simulation is running, press Ctrl+C to stop.")
 	<-done
+
+	time.Sleep(1 * time.Second)
+	fmt.Println()
+
+	fmt.Printf("--------------------------------------------------\n\n")
+	fmt.Printf("------------------DOWNTIME STATS------------------\n")
+	fmt.Println("HUB 1")
+	fmt.Printf("Total Downtime: %v\n", hub1.GetHubDowntime())
+	avgHub1 := hub1.GetAverageDowntimeStat()
+	fmt.Printf("Average Downtime per node: %v\n", avgHub1)
+
+	fmt.Println()
+
+	fmt.Println("HUB 2")
+	fmt.Printf("Total Downtime: %v\n", hub2.GetHubDowntime())
+	avgHub2 := hub1.GetAverageDowntimeStat()
+	fmt.Printf("Average Downtime per node: %v\n", avgHub2)
+
+	fmt.Printf("--------------------------------------------------\n\n")
+
 	fmt.Println("Exited")
 
 }
