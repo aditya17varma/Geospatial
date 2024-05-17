@@ -73,6 +73,7 @@ Some of the challenges I faced when building this project:
 <ul>
   <li>Planning the Proper Architecutre. With so many moving pieces, it was important to find an architeture that didn't have inefficient communication.</li>
   <li>Debugging Multi-Threaded Processes. Each channel of communication with each node was it's own go routine. Multiple go routines were also used to keep track of the simulation state.</li>
+  <li>Visualization. Go doesn't have a visualization library as powerful and expansive as Python. In the future, I might pipe the data from the simulation to a Python/React server that displays realtime movement of the nodes and other stats.</li>
 </ul>
 
 
