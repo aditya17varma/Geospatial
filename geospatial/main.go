@@ -45,10 +45,6 @@ type NodeConfig struct {
 }
 
 func main() {
-	// if len(os.Args) < 2 {
-	// 	fmt.Println("Usage: ./hub <listen-port>")
-	// }
-
 	// Read configuration file
 	var config Config
 	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
