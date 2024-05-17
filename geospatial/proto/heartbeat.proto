@@ -1,0 +1,97 @@
+syntax = "proto3";
+option go_package = "./messages";
+import "google/protobuf/timestamp.proto";
+
+/* --------------- Node --------------- */
+
+/* Heartbeat message */
+message Heartbeat {
+    string node_id = 1;
+    string state = 2;
+    google.protobuf.Timestamp timestamp = 3;
+    Geocoordinate coordinates = 4;
+    Battery battery_state = 5;
+}
+
+/* Geocoordinates message */
+message Geocoordinate {
+    double latitude = 1;
+    double longitude = 2;
+}
+
+/* Battery State message */
+message Battery {
+    int32 battery_level = 1;
+    bool seeking_charge = 2;
+}
+
+/* Join Request */
+message JoinRequest {
+    string node_addr = 1;
+    string node_id = 2;
+    Geocoordinate coordinates = 3;
+    Battery battery_state = 4;
+}
+
+/* Recon Message */
+message ReconRequest {
+    string node_addr = 1;
+    string node_id = 2;
+    Geocoordinate coordinates = 3;
+    Battery battery_state = 4;
+    google.protobuf.Timestamp timestamp = 5; 
+}
+
+/* --------------- Hub --------------- */
+
+/* Join Response */
+message JoinResponse {
+    bool accept = 1;
+    string node_id = 2;
+    Geocoordinate coordinates = 3;
+}
+
+/* Kill Node */
+message KillNode {
+    bool kill = 1;
+}
+
+/* Server message */
+message ServerMessage {
+    string response = 1;
+}
+
+/* Error message */
+message Error {
+    string error_detail = 1;
+}
+
+/* --------------- Planner --------------- */
+
+/* Recon Response */
+message ReconResponse {
+    string hub_host = 1;
+    string hub_port = 2;
+    string node_id = 3;
+    bool accept = 4;
+}
+
+/* --------------- Wrapper --------------- */
+
+message Wrapper {
+    oneof msg {
+        ReconRequest recon_req = 1;
+        ReconResponse recon_res = 2;
+
+        JoinRequest join_req = 3;
+        JoinResponse join_res = 4;
+
+        KillNode kill_node = 5;
+
+        ServerMessage server_message = 6;
+        Heartbeat heartbeat_message = 7;
+
+        Error error_message = 9;
+    }
+}
+
