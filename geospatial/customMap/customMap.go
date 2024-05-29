@@ -106,23 +106,6 @@ func InitHub(hubCollection map[string]*hub.Hub, hubMap *CustomMap) {
 			Icon:    icon,
 		})
 
-		// hubMap.AddCircle(&geoplot.Circle{
-		// 	LatLng:      hubGeoplotCoords,
-		// 	RadiusMeter: 1000,
-		// 	//Tooltip:     "Inner Circle",
-		// })
-
-		// hubMap.AddCircle(&geoplot.Circle{
-		// 	LatLng:      hubGeoplotCoords,
-		// 	RadiusMeter: 2000,
-		// 	//Tooltip:     "Middle Circle",
-		// })
-
-		// hubMap.AddCircle(&geoplot.Circle{
-		// 	LatLng:      hubGeoplotCoords,
-		// 	RadiusMeter: 3000,
-		// 	//Tooltip:     "Outer Circle",
-		// })
 	}
 	log.Println("-------------------------\n\n")
 }
@@ -162,35 +145,6 @@ func UpdateMap(hubCollection map[string]*hub.Hub, hubMap *CustomMap, planner *pl
 		}))
 
 	}
-
-	// for _, hubStation := range hubCollection {
-	// 	hubStation.Mutex.Lock()
-	// 	defer hubStation.Mutex.Unlock()
-
-	// 	for nodeId, node := range hubStation.NodeMap {
-
-	// 		hubAddr := hubStation.HubHost + ":" + hubStation.HubPort
-
-	// 		point := &geoplot.LatLng{
-	// 			Latitude:  node.Coordinates.Latitude,
-	// 			Longitude: node.Coordinates.Longitude,
-	// 		}
-
-	// 		nodeIcon := geoplot.ColorIcon(0, 255, 0)
-	// 		if node.BatteryLevel <= 50 && node.BatteryLevel > 30 {
-	// 			nodeIcon = geoplot.ColorIcon(255, 128, 0)
-	// 		} else if node.BatteryLevel <= 30 {
-	// 			nodeIcon = geoplot.ColorIcon(255, 0, 0)
-	// 		}
-
-	// 		markers = append(markers, (&geoplot.Marker{
-	// 			LatLng: point,
-	// 			//Popup: fmt.Sprintf("NodePop: %s", nodeId),
-	// 			Tooltip: fmt.Sprintf("NodeId: %s\nBattery: %v\nSeeking Charge: %v\nHub: %v", nodeId, node.BatteryLevel, node.SeekingCharge, hubAddr),
-	// 			Icon:    nodeIcon,
-	// 		}))
-	// 	}
-	// }
 
 	for _, marker := range markers {
 		hubMap.AddMarker(marker)

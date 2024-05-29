@@ -59,8 +59,10 @@ func main() {
 
 	// create new Hubs
 	// Harney Science Center coordinates
-	centerLat := config.Hub.Hub1Lat
-	centerLong := config.Hub.Hub2Long
+	// centerLat := config.Hub.Hub1Lat
+	// centerLong := config.Hub.Hub2Long
+	centerLat := 37.77695
+	centerLong := -122.45117
 	hub1 := hub.NewHub(config.Hub.Host, strconv.Itoa(config.Hub.PortRangeStart), config.Planner.AllocationPolicy, centerLat, centerLong, config.Hub.ChargingSpots)
 
 	hub2Lat := centerLat - 0.05
